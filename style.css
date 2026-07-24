@@ -1,202 +1,192 @@
 :root{
-  --paper:      #EDE6D6;
-  --paper-dark: #E1D7BF;
-  --ink:        #23324D;
-  --ink-soft:   #55627A;
-  --stamp:      #B33A3A;
-  --olive:      #6B7A4F;
-  --line:       #C9BC9C;
-  --card:       #F7F3E8;
-  --radius: 14px;
+  --bg:            #F2F2F7;
+  --card:          #FFFFFF;
+  --text:          #1C1C1E;
+  --text-secondary:#8E8E93;
+  --separator:     rgba(60,60,67,0.29);
+  --accent:        #007AFF;
+  --radius: 10px;
 }
 
-*{ box-sizing:border-box; }
+*{ box-sizing:border-box; -webkit-font-smoothing:antialiased; }
 
 html,body{
   margin:0; padding:0; min-height:100%;
-  background:
-    radial-gradient(circle at 1px 1px, rgba(35,50,77,0.07) 1px, transparent 1.4px) 0 0/16px 16px,
-    var(--paper);
-  color:var(--ink);
-  font-family:'Zen Maru Gothic', 'Hiragino Sans', sans-serif;
-  -webkit-tap-highlight-color: transparent;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
 }
 
-.mono{ font-family:'JetBrains Mono', monospace; }
-
-#app{ max-width:520px; margin:0 auto; padding:20px 16px 48px; }
+#app{ max-width:520px; margin:0 auto; padding:0 16px 40px; }
 
 .hidden{ display:none !important; }
 
-/* ---- 見出し(荷札風) ---- */
-.tag-header{
-  position:relative;
-  background:var(--card);
-  border:1.5px dashed var(--line);
-  border-radius:var(--radius);
-  padding:28px 20px 20px;
-  text-align:center;
-  margin-bottom:22px;
+/* ---- ラージタイトル ---- */
+.large-title-bar{ padding:6px 4px 12px; }
+.large-title-bar h1{
+  font-size:2.1rem; font-weight:700; margin:0; letter-spacing:-0.02em;
+  outline:none;
 }
-.tag-hole{
-  position:absolute; top:12px; left:50%; transform:translateX(-50%);
-  width:14px; height:14px; border-radius:50%;
-  background:var(--paper);
-  box-shadow: inset 0 0 0 1.5px var(--line);
-}
-.tag-header h1{
-  font-family:'Kaisei Decol', serif;
-  font-size:1.5rem; margin:6px 0 2px; letter-spacing:.02em;
-}
-.tag-header .sub{ margin:0; font-size:.8rem; color:var(--ink-soft); }
+.detail-title-bar h1{ cursor:text; border-radius:6px; padding:2px 4px; margin:0 -4px; }
+.detail-title-bar h1:focus{ background:var(--card); box-shadow:0 0 0 2px var(--accent); }
 
-/* ---- リストカード ---- */
-.list-card{
+/* ---- ナビゲーションバー(戻る) ---- */
+.nav-bar{ padding:14px 0 0; }
+.nav-back{
+  background:none; border:none; color:var(--accent);
+  font-size:1.05rem; padding:4px 2px; cursor:pointer; font-family:inherit;
+}
+
+/* ---- グループ化テーブル風カード ---- */
+.card-group{
+  background:var(--card);
+  border-radius:var(--radius);
+  overflow:hidden;
+  margin-bottom:18px;
+}
+
+.empty-hint{
+  text-align:center; color:var(--text-secondary); font-size:.9rem;
+  padding:28px 16px; background:var(--card); border-radius:var(--radius); margin-bottom:18px;
+}
+
+/* ---- リスト一覧の行 ---- */
+.list-row{
   display:flex; align-items:center; gap:12px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  padding:14px 16px; margin-bottom:10px;
+  padding:11px 14px;
+  border-bottom:0.5px solid var(--separator);
   cursor:pointer;
-  transition:transform .12s ease, box-shadow .12s ease;
 }
-.list-card:active{ transform:scale(0.98); }
-.list-card:hover{ box-shadow:0 3px 10px rgba(35,50,77,0.08); }
-.list-card .lc-name{ flex:1; font-weight:700; }
-.list-card .lc-count{
-  font-family:'JetBrains Mono', monospace;
-  font-size:.85rem; color:var(--ink-soft);
-  background:var(--paper); border-radius:8px; padding:3px 8px;
-  border:1px solid var(--line);
-}
-.list-card .lc-del{
-  background:none; border:none; color:var(--stamp); font-size:1.1rem; cursor:pointer; opacity:.6;
-}
-.list-card .lc-del:hover{ opacity:1; }
+.list-row:last-child{ border-bottom:none; }
+.list-row:active{ background:#F2F2F7; }
 
-.empty-hint{ text-align:center; color:var(--ink-soft); font-size:.9rem; padding:24px 8px; }
-
-/* ---- ボタン類 ---- */
-.btn-primary{
-  display:block; width:100%;
-  background:var(--ink); color:var(--paper);
-  border:none; border-radius:var(--radius);
-  padding:13px; font-size:.95rem; font-weight:700;
-  font-family:inherit; cursor:pointer;
-  margin-top:6px;
+.list-icon{
+  width:29px; height:29px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:.95rem; flex-shrink:0;
 }
-.btn-primary:active{ transform:scale(0.99); }
+.list-row .lr-name{
+  flex:1; font-size:1.02rem;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.list-row .lr-count{ color:var(--text-secondary); font-size:1rem; }
+.list-row .lr-chevron{ color:#C7C7CC; font-size:1rem; margin-left:2px; }
+.list-row .lr-del{
+  background:none; border:none; color:var(--text-secondary); font-size:1rem;
+  cursor:pointer; opacity:.55; padding:2px 2px 2px 6px;
+}
+.list-row .lr-del:hover{ opacity:1; color:#FF3B30; }
+
+/* ---- 追加行(＋ 新しいリスト / ＋ 新規項目) ---- */
+.add-row{
+  display:flex; align-items:center; gap:8px; width:100%;
+  background:none; border:none; text-align:left;
+  color:var(--accent); font-size:1rem; font-family:inherit;
+  padding:12px 6px; cursor:pointer;
+}
+.add-row-icon{
+  width:22px; height:22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--accent); color:#fff; font-size:.8rem; flex-shrink:0;
+}
 
 .btn-ghost{
   flex:1; text-align:center;
-  background:transparent; color:var(--ink-soft);
-  border:1px dashed var(--line); border-radius:10px;
-  padding:9px; font-size:.8rem; cursor:pointer; font-family:inherit;
+  background:var(--card); color:var(--text-secondary);
+  border:none; border-radius:8px;
+  padding:10px; font-size:.8rem; cursor:pointer; font-family:inherit;
 }
-.io-row{ display:flex; gap:10px; margin-top:14px; }
+.io-row{ display:flex; gap:10px; margin-top:8px; }
 .file-label{ display:flex; align-items:center; justify-content:center; }
 
-.btn-icon{
-  background:none; border:none; font-size:1.15rem; color:var(--ink);
-  cursor:pointer; padding:6px 8px; line-height:1;
-}
-
-/* ---- 詳細画面ヘッダー ---- */
-.detail-header{ display:flex; align-items:center; gap:6px; margin-bottom:14px; }
-.detail-header h2{ flex:1; font-family:'Kaisei Decol', serif; font-size:1.2rem; margin:0; text-align:center; }
-
 /* ---- 進捗バー ---- */
-.progress-wrap{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.progress-wrap{ display:flex; align-items:center; gap:10px; margin:2px 4px 14px; }
 .progress-bar{
-  flex:1; height:10px; border-radius:6px; background:var(--paper-dark);
-  overflow:hidden; border:1px solid var(--line);
+  flex:1; height:6px; border-radius:3px; background:#E5E5EA; overflow:hidden;
 }
-.progress-fill{ height:100%; background:var(--olive); width:0%; transition:width .25s ease; }
-#progress-label{ font-size:.8rem; color:var(--ink-soft); min-width:44px; text-align:right; }
+.progress-fill{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }
+#progress-label{ font-size:.82rem; color:var(--text-secondary); min-width:42px; text-align:right; }
 
-/* ---- フィルター ---- */
-.toolbar{ margin-bottom:12px; }
-.filter-toggle{ display:flex; gap:6px; }
-.filter-btn{
-  flex:1; padding:7px; font-size:.8rem; font-family:inherit;
-  background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft);
+/* ---- セグメントコントロール ---- */
+.segmented{
+  display:flex; background:#E5E5EA; border-radius:9px; padding:2px; margin:0 4px 16px;
 }
-.filter-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+.seg-btn{
+  flex:1; padding:6px; font-size:.85rem; font-family:inherit; font-weight:500;
+  background:transparent; border:none; border-radius:7px; cursor:pointer; color:var(--text);
+}
+.seg-btn.active{ background:var(--card); box-shadow:0 1px 2px rgba(0,0,0,0.12); }
 
-/* ---- ツリー ---- */
+/* ---- ツリー(アイテム行) ---- */
 .tree-root{ margin-bottom:8px; }
-.node{
-  position:relative;
-  border-left:2px dashed var(--line);
-  padding-left:14px; margin-left:6px;
-}
-.node.depth-0{ border-left:none; padding-left:0; margin-left:0; }
 
 .node-row{
-  display:flex; align-items:center; gap:8px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:9px 10px;
-  margin:6px 0;
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  border-bottom:0.5px solid var(--separator);
 }
-.node-row.checked{ opacity:.55; }
-.node-row.checked .node-name{ text-decoration:line-through; }
+.node.last-in-group > .node-row{ border-bottom:none; }
 
-.node-toggle-collapse{
-  background:none; border:none; font-size:.75rem; color:var(--ink-soft);
-  width:18px; cursor:pointer; padding:0;
-}
-.node-checkbox{
-  width:20px; height:20px; flex-shrink:0; accent-color:var(--olive); cursor:pointer;
-}
+.node.depth-0 > .node-row{ padding-left:14px; }
+.node.depth-1 > .node-row{ padding-left:34px; }
+.node.depth-2 > .node-row{ padding-left:54px; }
+.node.depth-3 > .node-row{ padding-left:74px; }
 
 .drag-handle{
-  background:none; border:none; font-size:1rem; color:var(--ink-soft);
-  cursor:grab; touch-action:none; padding:2px 4px; flex-shrink:0;
-  line-height:1; letter-spacing:-2px;
+  background:none; border:none; font-size:.95rem; color:#C7C7CC;
+  cursor:grab; touch-action:none; padding:2px 2px; flex-shrink:0; line-height:1;
 }
 .drag-handle:active{ cursor:grabbing; }
-.drag-handle.disabled{ opacity:.2; cursor:default; }
+.drag-handle.disabled{ opacity:.25; cursor:default; }
 
-.node.dragging{ opacity:.45; }
-.node.dragging .node-row{ box-shadow:0 4px 12px rgba(35,50,77,0.18); border-color:var(--ink); }
-.node-name{ flex:1; font-size:.92rem; word-break:break-word; }
-.node-name.editable{ border-bottom:1px dashed var(--line); }
-.node-note{ font-size:.75rem; color:var(--ink-soft); }
+.node-toggle-collapse{
+  background:none; border:none; font-size:.7rem; color:#C7C7CC;
+  width:16px; cursor:pointer; padding:0; flex-shrink:0;
+}
+
+/* ---- チェックサークル(SF Symbols風) ---- */
+.check-circle{
+  width:22px; height:22px; border-radius:50%; flex-shrink:0;
+  border:2px solid #C7C7CC; background:none; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.check-circle.checked{
+  border-color:var(--accent); background:var(--accent);
+}
+.check-circle.checked::after{
+  content:'✓'; color:#fff; font-size:.75rem; font-weight:700; line-height:1;
+}
+
+.node-name{
+  flex:1; font-size:.98rem; word-break:break-word;
+  outline:none; border-radius:5px; padding:1px 3px; margin:-1px -3px;
+}
+.node-name:focus{ box-shadow:0 0 0 2px var(--accent); background:#fff; }
+.node-row.checked .node-name{ color:var(--text-secondary); text-decoration:line-through; }
 
 .node-count{
-  font-family:'JetBrains Mono', monospace; font-size:.72rem;
-  color:var(--ink-soft); background:var(--paper); border:1px solid var(--line);
-  border-radius:6px; padding:2px 6px; white-space:nowrap;
+  font-size:.78rem; color:var(--text-secondary);
+  background:#F2F2F7; border-radius:6px; padding:2px 7px; white-space:nowrap; flex-shrink:0;
 }
 
-.node-actions{ display:flex; gap:2px; }
+.node-actions{ display:flex; gap:0; flex-shrink:0; }
 .node-actions button{
-  background:none; border:none; font-size:.85rem; color:var(--ink-soft);
-  cursor:pointer; padding:4px 5px;
+  background:none; border:none; font-size:.9rem; color:var(--text-secondary);
+  cursor:pointer; padding:4px 5px; opacity:.6;
 }
-.node-actions button:hover{ color:var(--ink); }
-.node-actions .danger:hover{ color:var(--stamp); }
+.node-actions button:hover{ opacity:1; }
+.node-actions .danger:hover{ color:#FF3B30; }
 
-.node-children{ padding-left:2px; }
+.node-children{ }
 
 .node-subrow{
-  display:flex; gap:8px; margin:2px 0 6px 2px; flex-wrap:wrap;
+  display:flex; gap:14px; padding:0 14px 8px 54px; flex-wrap:wrap;
+  border-bottom:0.5px solid var(--separator);
 }
+.node.depth-0 .node-subrow{ padding-left:44px; }
 .mini-btn{
-  font-size:.7rem; padding:3px 8px; border-radius:6px;
-  border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); cursor:pointer; font-family:inherit;
+  font-size:.75rem; padding:0; border:none; background:none; color:var(--accent); cursor:pointer; font-family:inherit;
 }
 
-.add-item-inline{
-  display:flex; gap:6px; margin:6px 0 6px 2px;
-}
-.add-item-inline input{
-  flex:1; padding:7px 9px; border-radius:8px; border:1px solid var(--line);
-  font-family:inherit; font-size:.85rem; background:var(--paper);
-}
-.add-item-inline button{
-  padding:7px 12px; border-radius:8px; border:none; background:var(--ink); color:var(--paper);
-  font-size:.8rem; cursor:pointer;
-}
+.node.dragging{ opacity:.5; }
+.node.dragging .node-row{ background:#F2F2F7; }
