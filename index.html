@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>持ち物チェックリスト</title>
+
+<!-- PWA / iOS ホーム画面対応 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#23324D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="持ち物リスト">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol&family=Zen+Maru+Gothic:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== チェックリスト一覧画面 ===== -->
+  <section id="view-lists" class="view">
+    <header class="tag-header">
+      <div class="tag-hole"></div>
+      <h1>持ち物チェックリスト</h1>
+      <p class="sub">忘れ物ゼロへの旅のお供</p>
+    </header>
+
+    <div id="lists-container"></div>
+
+    <button id="btn-new-list" class="btn-primary">+ 新しいチェックリスト</button>
+
+    <div class="io-row">
+      <button id="btn-export" class="btn-ghost">書き出し (JSON)</button>
+      <label class="btn-ghost file-label">
+        読み込み
+        <input type="file" id="file-import" accept="application/json" hidden>
+      </label>
+    </div>
+  </section>
+
+  <!-- ===== チェックリスト詳細画面 ===== -->
+  <section id="view-detail" class="view hidden">
+    <header class="detail-header">
+      <button id="btn-back" class="btn-icon" aria-label="戻る">←</button>
+      <h2 id="detail-title">-</h2>
+      <button id="btn-rename" class="btn-icon" aria-label="名前変更">✎</button>
+    </header>
+
+    <div class="progress-wrap">
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      <span id="progress-label" class="mono">0/0</span>
+    </div>
+
+    <div class="toolbar">
+      <div class="filter-toggle" role="group" aria-label="表示切替">
+        <button class="filter-btn active" data-filter="all">すべて</button>
+        <button class="filter-btn" data-filter="unchecked">未チェックのみ</button>
+      </div>
+    </div>
+
+    <div id="tree-root" class="tree-root"></div>
+
+    <button id="btn-add-root-item" class="btn-primary">+ 項目を追加</button>
+  </section>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+:root{
+  --paper:      #EDE6D6;
+  --paper-dark: #E1D7BF;
+  --ink:        #23324D;
+  --ink-soft:   #55627A;
+  --stamp:      #B33A3A;
+  --olive:      #6B7A4F;
+  --line:       #C9BC9C;
+  --card:       #F7F3E8;
+  --radius: 14px;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{
+  margin:0; padding:0; min-height:100%;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(35,50,77,0.07) 1px, transparent 1.4px) 0 0/16px 16px,
+    var(--paper);
+  color:var(--ink);
+  font-family:'Zen Maru Gothic', 'Hiragino Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mono{ font-family:'JetBrains Mono', monospace; }
+
+#app{ max-width:520px; margin:0 auto; padding:20px 16px 48px; }
+
+.hidden{ display:none !important; }
+
+/* ---- 見出し(荷札風) ---- */
+.tag-header{
+  position:relative;
+  background:var(--card);
+  border:1.5px dashed var(--line);
+  border-radius:var(--radius);
+  padding:28px 20px 20px;
+  text-align:center;
+  margin-bottom:22px;
+}
+.tag-hole{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  width:14px; height:14px; border-radius:50%;
+  background:var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.tag-header h1{
+  font-family:'Kaisei Decol', serif;
+  font-size:1.5rem; margin:6px 0 2px; letter-spacing:.02em;
+}
+.tag-header .sub{ margin:0; font-size:.8rem; color:var(--ink-soft); }
+
+/* ---- リストカード ---- */
+.list-card{
+  display:flex; align-items:center; gap:12px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:14px 16px; margin-bottom:10px;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.list-card:active{ transform:scale(0.98); }
+.list-card:hover{ box-shadow:0 3px 10px rgba(35,50,77,0.08); }
+.list-card .lc-name{ flex:1; font-weight:700; }
+.list-card .lc-count{
+  font-family:'JetBrains Mono', monospace;
+  font-size:.85rem; color:var(--ink-soft);
+  background:var(--paper); border-radius:8px; padding:3px 8px;
+  border:1px solid var(--line);
+}
+.list-card .lc-del{
+  background:none; border:none; color:var(--stamp); font-size:1.1rem; cursor:pointer; opacity:.6;
+}
+.list-card .lc-del:hover{ opacity:1; }
+
+.empty-hint{ text-align:center; color:var(--ink-soft); font-size:.9rem; padding:24px 8px; }
+
+/* ---- ボタン類 ---- */
+.btn-primary{
+  display:block; width:100%;
+  background:var(--ink); color:var(--paper);
+  border:none; border-radius:var(--radius);
+  padding:13px; font-size:.95rem; font-weight:700;
+  font-family:inherit; cursor:pointer;
+  margin-top:6px;
+}
+.btn-primary:active{ transform:scale(0.99); }
+
+.btn-ghost{
+  flex:1; text-align:center;
+  background:transparent; color:var(--ink-soft);
+  border:1px dashed var(--line); border-radius:10px;
+  padding:9px; font-size:.8rem; cursor:pointer; font-family:inherit;
+}
+.io-row{ display:flex; gap:10px; margin-top:14px; }
+.file-label{ display:flex; align-items:center; justify-content:center; }
+
+.btn-icon{
+  background:none; border:none; font-size:1.15rem; color:var(--ink);
+  cursor:pointer; padding:6px 8px; line-height:1;
+}
+
+/* ---- 詳細画面ヘッダー ---- */
+.detail-header{ display:flex; align-items:center; gap:6px; margin-bottom:14px; }
+.detail-header h2{ flex:1; font-family:'Kaisei Decol', serif; font-size:1.2rem; margin:0; text-align:center; }
+
+/* ---- 進捗バー ---- */
+.progress-wrap{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.progress-bar{
+  flex:1; height:10px; border-radius:6px; background:var(--paper-dark);
+  overflow:hidden; border:1px solid var(--line);
+}
+.progress-fill{ height:100%; background:var(--olive); width:0%; transition:width .25s ease; }
+#progress-label{ font-size:.8rem; color:var(--ink-soft); min-width:44px; text-align:right; }
+
+/* ---- フィルター ---- */
+.toolbar{ margin-bottom:12px; }
+.filter-toggle{ display:flex; gap:6px; }
+.filter-btn{
+  flex:1; padding:7px; font-size:.8rem; font-family:inherit;
+  background:var(--card); border:1px solid var(--line); border-radius:8px; cursor:pointer; color:var(--ink-soft);
+}
+.filter-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+/* ---- ツリー ---- */
+.tree-root{ margin-bottom:8px; }
+.node{
+  position:relative;
+  border-left:2px dashed var(--line);
+  padding-left:14px; margin-left:6px;
+}
+.node.depth-0{ border-left:none; padding-left:0; margin-left:0; }
+
+.node-row{
+  display:flex; align-items:center; gap:8px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:9px 10px;
+  margin:6px 0;
+}
+.node-row.checked{ opacity:.55; }
+.node-row.checked .node-name{ text-decoration:line-through; }
+
+.node-toggle-collapse{
+  background:none; border:none; font-size:.75rem; color:var(--ink-soft);
+  width:18px; cursor:pointer; padding:0;
+}
+.node-checkbox{
+  width:20px; height:20px; flex-shrink:0; accent-color:var(--olive); cursor:pointer;
+}
+
+.drag-handle{
+  background:none; border:none; font-size:1rem; color:var(--ink-soft);
+  cursor:grab; touch-action:none; padding:2px 4px; flex-shrink:0;
+  line-height:1; letter-spacing:-2px;
+}
+.drag-handle:active{ cursor:grabbing; }
+.drag-handle.disabled{ opacity:.2; cursor:default; }
+
+.node.dragging{ opacity:.45; }
+.node.dragging .node-row{ box-shadow:0 4px 12px rgba(35,50,77,0.18); border-color:var(--ink); }
+.node-name{ flex:1; font-size:.92rem; word-break:break-word; }
+.node-name.editable{ border-bottom:1px dashed var(--line); }
+.node-note{ font-size:.75rem; color:var(--ink-soft); }
+
+.node-count{
+  font-family:'JetBrains Mono', monospace; font-size:.72rem;
+  color:var(--ink-soft); background:var(--paper); border:1px solid var(--line);
+  border-radius:6px; padding:2px 6px; white-space:nowrap;
+}
+
+.node-actions{ display:flex; gap:2px; }
+.node-actions button{
+  background:none; border:none; font-size:.85rem; color:var(--ink-soft);
+  cursor:pointer; padding:4px 5px;
+}
+.node-actions button:hover{ color:var(--ink); }
+.node-actions .danger:hover{ color:var(--stamp); }
+
+.node-children{ padding-left:2px; }
+
+.node-subrow{
+  display:flex; gap:8px; margin:2px 0 6px 2px; flex-wrap:wrap;
+}
+.mini-btn{
+  font-size:.7rem; padding:3px 8px; border-radius:6px;
+  border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); cursor:pointer; font-family:inherit;
+}
+
+.add-item-inline{
+  display:flex; gap:6px; margin:6px 0 6px 2px;
+}
+.add-item-inline input{
+  flex:1; padding:7px 9px; border-radius:8px; border:1px solid var(--line);
+  font-family:inherit; font-size:.85rem; background:var(--paper);
+}
+.add-item-inline button{
+  padding:7px 12px; border-radius:8px; border:none; background:var(--ink); color:var(--paper);
+  font-size:.8rem; cursor:pointer;
+}
