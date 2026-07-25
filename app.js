@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v7';
+const APP_VERSION = 'v8';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -254,7 +254,7 @@ function renderNode(node, list, depth){
   const canIndent = loc.idx > 0; // 直前の兄弟がいないと子にできない
 
   row.innerHTML = `
-    ${hasChildren ? `<button class="node-toggle-collapse">${node.collapsed?'▶':'▼'}</button>` : '<span style="width:16px;flex-shrink:0"></span>'}
+    ${hasChildren ? `<button class="node-toggle-collapse">${node.collapsed?'▶':'▼'}</button>` : '<span style="width:34px;flex-shrink:0"></span>'}
     <button class="check-circle${node.checked?' checked':''}" aria-label="チェック"></button>
     <span class="node-name" contenteditable="true" spellcheck="false" data-placeholder="新規項目"></span>
     ${hasChildren ? `<span class="node-count"></span>` : ''}
@@ -273,7 +273,8 @@ function renderNode(node, list, depth){
   if(hasChildren){
     const {total, checked} = countDirect(node);
     row.querySelector('.node-count').textContent = `${checked}/${total}`;
-    row.querySelector('.node-toggle-collapse').addEventListener('click', ()=>{
+    row.querySelector('.node-toggle-collapse').addEventListener('click', (e)=>{
+      e.stopPropagation();
       node.collapsed = !node.collapsed;
       save(); renderDetail();
     });

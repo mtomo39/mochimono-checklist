@@ -145,9 +145,13 @@ html,body{
 .node.depth-3 > .node-row{ padding-left:74px; }
 
 .node-toggle-collapse{
-  background:none; border:none; font-size:.7rem; color:#C7C7CC;
-  width:16px; cursor:pointer; padding:0; flex-shrink:0;
+  background:none; border:none; font-size:1.05rem; color:#8E8E93;
+  width:34px; height:34px; flex-shrink:0; cursor:pointer;
+  padding:0; margin:-6px 0 -6px -8px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:8px;
 }
+.node-toggle-collapse:active{ background:#E5E5EA; }
 
 /* ---- チェックサークル(SF Symbols風) ---- */
 .check-circle{
