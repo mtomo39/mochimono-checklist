@@ -1,8 +1,11 @@
 // ===== 持ち物チェックリスト app.js =====
+const APP_VERSION = 'v7';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+let selectedNodeId = null; // 今タップして選択中の項目(この項目だけ操作ボタンを表示する)
 
 /** state = { lists: [ {id,name,color,filter,items:[node,...]} ] , currentListId } */
 let state = load() || { lists: [], currentListId: null };
@@ -97,6 +100,7 @@ const progressLabel = document.getElementById('progress-label');
 // ===== 画面遷移 =====
 function showLists(){
   state.currentListId = null;
+  selectedNodeId = null;
   viewDetail.classList.add('hidden');
   viewLists.classList.remove('hidden');
   renderLists();
@@ -104,8 +108,9 @@ function showLists(){
 }
 function showDetail(id, focusTitle=false){
   state.currentListId = id;
-  viewLists.classList.add('hidden');
+  selectedNodeId = null;
   viewDetail.classList.remove('hidden');
+  viewLists.classList.add('hidden');
   renderDetail();
   save();
   if(focusTitle){
@@ -239,7 +244,7 @@ function renderNode(node, list, depth){
   wrap.dataset.id = node.id;
 
   const row = document.createElement('div');
-  row.className = 'node-row' + (node.checked ? ' checked' : '');
+  row.className = 'node-row' + (node.checked ? ' checked' : '') + (node.id === selectedNodeId ? ' selected' : '');
 
   const hasChildren = node.children.length>0;
   const loc = locate(list, node.id);
@@ -256,6 +261,14 @@ function renderNode(node, list, depth){
     <button class="act-del danger" title="削除">🗑</button>
   `;
   row.querySelector('.node-name').textContent = node.name;
+
+  // タップでこの項目を選択状態にする(選択中の項目だけ下に操作ボタンを出す)
+  row.addEventListener('click', ()=>{
+    if(selectedNodeId !== node.id){
+      selectedNodeId = node.id;
+      renderDetail();
+    }
+  });
 
   if(hasChildren){
     const {total, checked} = countDirect(node);
@@ -296,77 +309,87 @@ function renderNode(node, list, depth){
 
   wrap.appendChild(row);
 
-  // ===== 移動・階層操作・追加ボタン(2段目) =====
-  const toolsrow = document.createElement('div');
-  toolsrow.className = 'node-toolsrow';
-  toolsrow.innerHTML = `
-    <button class="tool-btn act-up" title="上へ移動" ${canUp?'':'disabled'}>↑</button>
-    <button class="tool-btn act-down" title="下へ移動" ${canDown?'':'disabled'}>↓</button>
-    <button class="tool-btn act-outdent" title="上の階層へ移動" ${canOutdent?'':'disabled'}>⇤</button>
-    <button class="tool-btn act-indent" title="ひとつ上の項目の子にする" ${canIndent?'':'disabled'}>⇥</button>
-    <span class="tool-sep"></span>
-    <button class="tool-btn tool-btn-text act-add-sibling" title="同じ階層に項目を追加">＋同階層</button>
-    <button class="tool-btn tool-btn-text act-add-child" title="子項目として追加">＋子項目</button>
-  `;
+  // ===== 移動・階層操作・追加ボタン(選択中の項目だけ表示) =====
+  if(node.id === selectedNodeId){
+    const toolsrow = document.createElement('div');
+    toolsrow.className = 'node-toolsrow';
+    toolsrow.innerHTML = `
+      <button class="tool-btn act-up" title="上へ移動" ${canUp?'':'disabled'}>↑</button>
+      <button class="tool-btn act-down" title="下へ移動" ${canDown?'':'disabled'}>↓</button>
+      <button class="tool-btn act-outdent" title="上の階層へ移動" ${canOutdent?'':'disabled'}>⇤</button>
+      <button class="tool-btn act-indent" title="ひとつ上の項目の子にする" ${canIndent?'':'disabled'}>⇥</button>
+      <span class="tool-sep"></span>
+      <button class="tool-btn tool-btn-text act-add-sibling" title="同じ階層に項目を追加">＋同階層</button>
+      <button class="tool-btn tool-btn-text act-add-child" title="子項目として追加">＋子項目</button>
+    `;
 
-  toolsrow.querySelector('.act-up').addEventListener('click', ()=>{
-    const l = locate(list, node.id);
-    if(l.idx > 0){
-      [l.arr[l.idx-1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx-1]];
+    toolsrow.querySelector('.act-up').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const l = locate(list, node.id);
+      if(l.idx > 0){
+        [l.arr[l.idx-1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx-1]];
+        save(); renderDetail();
+      }
+    });
+    toolsrow.querySelector('.act-down').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const l = locate(list, node.id);
+      if(l.idx < l.arr.length-1){
+        [l.arr[l.idx+1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx+1]];
+        save(); renderDetail();
+      }
+    });
+    toolsrow.querySelector('.act-outdent').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const l = locate(list, node.id);
+      if(!l.parent) return; // すでにルート直下
+      const oldParentId = l.parent.id;
+      const grand = locate(list, l.parent.id);
+      const [moved] = l.arr.splice(l.idx, 1);
+      grand.arr.splice(grand.idx+1, 0, moved);
+      syncCheckedUpward(list, oldParentId);
       save(); renderDetail();
-    }
-  });
-  toolsrow.querySelector('.act-down').addEventListener('click', ()=>{
-    const l = locate(list, node.id);
-    if(l.idx < l.arr.length-1){
-      [l.arr[l.idx+1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx+1]];
+    });
+    toolsrow.querySelector('.act-indent').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const l = locate(list, node.id);
+      if(l.idx === 0) return; // 直前の兄弟がいない
+      const prevSibling = l.arr[l.idx-1];
+      const [moved] = l.arr.splice(l.idx, 1);
+      prevSibling.children.push(moved);
+      prevSibling.collapsed = false;
+      syncCheckedUpward(list, prevSibling.id);
       save(); renderDetail();
-    }
-  });
-  toolsrow.querySelector('.act-outdent').addEventListener('click', ()=>{
-    const l = locate(list, node.id);
-    if(!l.parent) return; // すでにルート直下
-    const oldParentId = l.parent.id;
-    const grand = locate(list, l.parent.id);
-    const [moved] = l.arr.splice(l.idx, 1);
-    grand.arr.splice(grand.idx+1, 0, moved);
-    syncCheckedUpward(list, oldParentId);
-    save(); renderDetail();
-  });
-  toolsrow.querySelector('.act-indent').addEventListener('click', ()=>{
-    const l = locate(list, node.id);
-    if(l.idx === 0) return; // 直前の兄弟がいない
-    const prevSibling = l.arr[l.idx-1];
-    const [moved] = l.arr.splice(l.idx, 1);
-    prevSibling.children.push(moved);
-    prevSibling.collapsed = false;
-    syncCheckedUpward(list, prevSibling.id);
-    save(); renderDetail();
-  });
+    });
 
-  const addSiblingBtn = toolsrow.querySelector('.act-add-sibling');
-  addSiblingBtn.addEventListener('click', guardAddClick, true);
-  addSiblingBtn.addEventListener('click', ()=>{
-    const l = locate(list, node.id);
-    const child = newNode();
-    l.arr.splice(l.idx+1, 0, child);
-    if(l.parent) syncCheckedUpward(list, l.parent.id);
-    save(); renderDetail();
-    focusNodeName(child.id);
-  });
+    const addSiblingBtn = toolsrow.querySelector('.act-add-sibling');
+    addSiblingBtn.addEventListener('click', guardAddClick, true);
+    addSiblingBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const l = locate(list, node.id);
+      const child = newNode();
+      l.arr.splice(l.idx+1, 0, child);
+      if(l.parent) syncCheckedUpward(list, l.parent.id);
+      selectedNodeId = child.id;
+      save(); renderDetail();
+      focusNodeName(child.id);
+    });
 
-  const addChildBtn = toolsrow.querySelector('.act-add-child');
-  addChildBtn.addEventListener('click', guardAddClick, true);
-  addChildBtn.addEventListener('click', ()=>{
-    const child = newNode();
-    node.children.push(child);
-    node.collapsed = false;
-    syncCheckedUpward(list, node.id);
-    save(); renderDetail();
-    focusNodeName(child.id);
-  });
+    const addChildBtn = toolsrow.querySelector('.act-add-child');
+    addChildBtn.addEventListener('click', guardAddClick, true);
+    addChildBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const child = newNode();
+      node.children.push(child);
+      node.collapsed = false;
+      syncCheckedUpward(list, node.id);
+      selectedNodeId = child.id;
+      save(); renderDetail();
+      focusNodeName(child.id);
+    });
 
-  wrap.appendChild(toolsrow);
+    wrap.appendChild(toolsrow);
+  }
 
   if(hasChildren && !node.collapsed){
     const childWrap = document.createElement('div');
@@ -398,6 +421,7 @@ document.getElementById('btn-add-root-item').addEventListener('click', ()=>{
   const list = findList(state.currentListId);
   const child = newNode();
   list.items.push(child);
+  selectedNodeId = child.id;
   save(); renderDetail();
   focusNodeName(child.id);
 });
@@ -461,4 +485,6 @@ if('serviceWorker' in navigator){
 }
 
 // ===== 初期表示 =====
+const versionEl = document.getElementById('app-version');
+if(versionEl) versionEl.textContent = APP_VERSION;
 showLists();
