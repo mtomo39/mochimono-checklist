@@ -32,13 +32,18 @@ function findNode(nodes, id){
   }
   return null;
 }
-function findParentArray(nodes, id){
-  for(const n of nodes){
-    if(n.id===id) return nodes;
-    const r = findParentArray(n.children, id);
-    if(r) return r;
+
+// node の { 所属している配列, その配列内でのindex, 親ノード(ルート直下ならnull) } を探す
+function locate(list, id){
+  function search(nodes, parent){
+    for(let i=0;i<nodes.length;i++){
+      if(nodes[i].id === id) return { arr: nodes, idx: i, parent };
+      const found = search(nodes[i].children, nodes[i]);
+      if(found) return found;
+    }
+    return null;
   }
-  return null;
+  return search(list.items, null);
 }
 
 function setCheckedRecursive(node, value){
@@ -65,12 +70,6 @@ function countAll(nodes){
 function nodeHasVisibleDescendant(node){
   if(!node.checked) return true;
   return node.children.some(nodeHasVisibleDescendant);
-}
-
-function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
 }
 
 // ===== DOM refs =====
@@ -154,11 +153,11 @@ function renderLists(){
 // 1回目のタップはキーボードを閉じるだけにして、誤操作での追加を防ぐ
 function guardAddClick(e){
   const active = document.activeElement;
-  const isEditing = active && (active.classList && active.classList.contains('node-name') || active === detailTitle);
+  const isEditing = active && ((active.classList && active.classList.contains('node-name')) || active === detailTitle);
   if(isEditing){
     active.blur();
     e.preventDefault();
-    e.stopPropagation();
+    e.stopImmediatePropagation(); // 同じ要素の他のリスナー(実際の追加処理)も止める
   }
 }
 document.getElementById('btn-new-list').addEventListener('click', guardAddClick, true);
@@ -230,17 +229,18 @@ function renderNode(node, list, depth){
   row.className = 'node-row' + (node.checked ? ' checked' : '');
 
   const hasChildren = node.children.length>0;
+  const loc = locate(list, node.id);
+  const canUp = loc.idx > 0;
+  const canDown = loc.idx < loc.arr.length - 1;
+  const canOutdent = loc.parent !== null; // ルート直下なら上の階層はない
+  const canIndent = loc.idx > 0; // 直前の兄弟がいないと子にできない
 
   row.innerHTML = `
-    <button class="drag-handle" title="ドラッグで並び替え">⠿</button>
     ${hasChildren ? `<button class="node-toggle-collapse">${node.collapsed?'▶':'▼'}</button>` : '<span style="width:16px;flex-shrink:0"></span>'}
     <button class="check-circle${node.checked?' checked':''}" aria-label="チェック"></button>
     <span class="node-name" contenteditable="true" spellcheck="false" data-placeholder="新規項目"></span>
     ${hasChildren ? `<span class="node-count"></span>` : ''}
-    <div class="node-actions">
-      <button class="act-add" title="子項目を追加">＋</button>
-      <button class="act-del danger" title="削除">🗑</button>
-    </div>
+    <button class="act-del danger" title="削除">🗑</button>
   `;
   row.querySelector('.node-name').textContent = node.name;
 
@@ -271,10 +271,73 @@ function renderNode(node, list, depth){
     if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
   });
 
-  // 子項目の追加(追加後すぐ名前を編集できるようにフォーカス)
-  const addBtn = row.querySelector('.act-add');
-  addBtn.addEventListener('click', guardAddClick, true);
-  addBtn.addEventListener('click', ()=>{
+  row.querySelector('.act-del').addEventListener('click', ()=>{
+    if(hasChildren && !confirm(`「${node.name}」を削除する?(子項目も全部消えるよ)`)) return;
+    const l2 = locate(list, node.id);
+    l2.arr.splice(l2.idx, 1);
+    save(); renderDetail();
+  });
+
+  wrap.appendChild(row);
+
+  // ===== 移動・階層操作・追加ボタン(2段目) =====
+  const toolsrow = document.createElement('div');
+  toolsrow.className = 'node-toolsrow';
+  toolsrow.innerHTML = `
+    <button class="tool-btn act-up" title="上へ移動" ${canUp?'':'disabled'}>↑</button>
+    <button class="tool-btn act-down" title="下へ移動" ${canDown?'':'disabled'}>↓</button>
+    <button class="tool-btn act-outdent" title="上の階層へ移動" ${canOutdent?'':'disabled'}>⇤</button>
+    <button class="tool-btn act-indent" title="ひとつ上の項目の子にする" ${canIndent?'':'disabled'}>⇥</button>
+    <span class="tool-sep"></span>
+    <button class="tool-btn tool-btn-text act-add-sibling" title="同じ階層に項目を追加">＋同階層</button>
+    <button class="tool-btn tool-btn-text act-add-child" title="子項目として追加">＋子項目</button>
+  `;
+
+  toolsrow.querySelector('.act-up').addEventListener('click', ()=>{
+    const l = locate(list, node.id);
+    if(l.idx > 0){
+      [l.arr[l.idx-1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx-1]];
+      save(); renderDetail();
+    }
+  });
+  toolsrow.querySelector('.act-down').addEventListener('click', ()=>{
+    const l = locate(list, node.id);
+    if(l.idx < l.arr.length-1){
+      [l.arr[l.idx+1], l.arr[l.idx]] = [l.arr[l.idx], l.arr[l.idx+1]];
+      save(); renderDetail();
+    }
+  });
+  toolsrow.querySelector('.act-outdent').addEventListener('click', ()=>{
+    const l = locate(list, node.id);
+    if(!l.parent) return; // すでにルート直下
+    const grand = locate(list, l.parent.id);
+    const [moved] = l.arr.splice(l.idx, 1);
+    grand.arr.splice(grand.idx+1, 0, moved);
+    save(); renderDetail();
+  });
+  toolsrow.querySelector('.act-indent').addEventListener('click', ()=>{
+    const l = locate(list, node.id);
+    if(l.idx === 0) return; // 直前の兄弟がいない
+    const prevSibling = l.arr[l.idx-1];
+    const [moved] = l.arr.splice(l.idx, 1);
+    prevSibling.children.push(moved);
+    prevSibling.collapsed = false;
+    save(); renderDetail();
+  });
+
+  const addSiblingBtn = toolsrow.querySelector('.act-add-sibling');
+  addSiblingBtn.addEventListener('click', guardAddClick, true);
+  addSiblingBtn.addEventListener('click', ()=>{
+    const l = locate(list, node.id);
+    const child = newNode();
+    l.arr.splice(l.idx+1, 0, child);
+    save(); renderDetail();
+    focusNodeName(child.id);
+  });
+
+  const addChildBtn = toolsrow.querySelector('.act-add-child');
+  addChildBtn.addEventListener('click', guardAddClick, true);
+  addChildBtn.addEventListener('click', ()=>{
     const child = newNode();
     node.children.push(child);
     node.collapsed = false;
@@ -282,26 +345,9 @@ function renderNode(node, list, depth){
     focusNodeName(child.id);
   });
 
-  row.querySelector('.act-del').addEventListener('click', ()=>{
-    if(hasChildren && !confirm(`「${node.name}」を削除する?(子項目も全部消えるよ)`)) return;
-    const arr = findParentArray(list.items, node.id) || list.items;
-    const idx = arr.findIndex(n=>n.id===node.id);
-    if(idx>-1) arr.splice(idx,1);
-    save(); renderDetail();
-  });
+  wrap.appendChild(toolsrow);
 
-  // ドラッグハンドル(「未チェックのみ」表示中は無効)
-  const handle = row.querySelector('.drag-handle');
-  if(list.filter !== 'all'){
-    handle.disabled = true;
-    handle.classList.add('disabled');
-  }else{
-    handle.addEventListener('pointerdown', (e)=> startDrag(e, wrap, node, list));
-  }
-
-  wrap.appendChild(row);
-
-  // 全チェック/全解除(このノード配下すべて)
+  // 全チェック/全解除(このノード配下すべて、子がある時だけ表示)
   if(hasChildren){
     const subrow = document.createElement('div');
     subrow.className = 'node-subrow';
@@ -372,140 +418,6 @@ document.getElementById('btn-uncheck-all-list').addEventListener('click', ()=>{
   list.items.forEach(n => setCheckedRecursive(n, false));
   save(); renderDetail();
 });
-
-// ===== ドラッグ&ドロップで並び替え・階層移動 =====
-const LONG_PRESS_MS = 180;
-const MOVE_CANCEL_PX = 10;
-let dragCtx = null;
-
-function isDescendant(node, id){
-  return node.children.some(c => c.id === id || isDescendant(c, id));
-}
-
-function clearDropHighlights(){
-  document.querySelectorAll('.node-row.drop-before, .node-row.drop-after, .node-row.drop-nest')
-    .forEach(el => el.classList.remove('drop-before','drop-after','drop-nest'));
-}
-
-function startDrag(e, wrap, node, list){
-  const startX = e.clientX, startY = e.clientY;
-  const pointerId = e.pointerId;
-  let longPressTimer = null;
-  let activated = false;
-
-  function cleanupPending(){
-    clearTimeout(longPressTimer);
-    document.removeEventListener('pointermove', onPreMove);
-    document.removeEventListener('pointerup', onPreUp);
-  }
-
-  function onPreMove(ev){
-    if(ev.pointerId !== pointerId) return;
-    const dx = ev.clientX - startX, dy = ev.clientY - startY;
-    if(Math.hypot(dx,dy) > MOVE_CANCEL_PX) cleanupPending();
-  }
-  function onPreUp(ev){
-    if(ev.pointerId !== pointerId) return;
-    cleanupPending();
-  }
-
-  document.addEventListener('pointermove', onPreMove);
-  document.addEventListener('pointerup', onPreUp);
-
-  longPressTimer = setTimeout(()=>{
-    cleanupPending();
-    activated = true;
-    activateDrag();
-  }, LONG_PRESS_MS);
-
-  let ghost = null;
-
-  function activateDrag(){
-    wrap.classList.add('dragging');
-    try{ wrap.setPointerCapture(pointerId); }catch(_){/* noop */}
-    dragCtx = { pointerId, dropTargetId:null, dropMode:null };
-
-    ghost = document.createElement('div');
-    ghost.className = 'drag-ghost';
-    ghost.textContent = node.name || '(無題の項目)';
-    document.body.appendChild(ghost);
-    positionGhost(startX, startY);
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-  }
-
-  function positionGhost(x, y){
-    if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
-  }
-
-  function onMove(ev){
-    if(!dragCtx || ev.pointerId !== dragCtx.pointerId) return;
-    ev.preventDefault();
-    positionGhost(ev.clientX, ev.clientY);
-    clearDropHighlights();
-    dragCtx.dropTargetId = null;
-    dragCtx.dropMode = null;
-
-    const el = document.elementFromPoint(ev.clientX, ev.clientY);
-    const targetRow = el && el.closest && el.closest('.node-row');
-    if(!targetRow) return;
-    const targetWrap = targetRow.closest('.node');
-    if(!targetWrap) return;
-    const targetId = targetWrap.dataset.id;
-    if(targetId === node.id) return;
-    if(isDescendant(node, targetId)) return; // 自分の子孫の上には置けない(循環防止)
-
-    const rect = targetRow.getBoundingClientRect();
-    const relY = (ev.clientY - rect.top) / rect.height;
-    let mode;
-    if(relY < 0.28) mode = 'before';
-    else if(relY > 0.72) mode = 'after';
-    else mode = 'nest';
-
-    dragCtx.dropTargetId = targetId;
-    dragCtx.dropMode = mode;
-    targetRow.classList.add(mode === 'nest' ? 'drop-nest' : (mode === 'before' ? 'drop-before' : 'drop-after'));
-  }
-
-  function onUp(ev){
-    if(!dragCtx || ev.pointerId !== dragCtx.pointerId) return;
-    const { dropTargetId, dropMode } = dragCtx;
-    dragCtx = null;
-    wrap.classList.remove('dragging');
-    clearDropHighlights();
-    if(ghost){ ghost.remove(); ghost = null; }
-    try{ wrap.releasePointerCapture(ev.pointerId); }catch(_){/* noop */}
-    document.removeEventListener('pointermove', onMove);
-    document.removeEventListener('pointerup', onUp);
-
-    if(dropTargetId && dropMode){
-      // 元の場所から取り除く
-      const oldArr = findParentArray(list.items, node.id) || list.items;
-      const oldIdx = oldArr.findIndex(n => n.id === node.id);
-      if(oldIdx > -1) oldArr.splice(oldIdx, 1);
-
-      if(dropMode === 'nest'){
-        const targetNode = findNode(list.items, dropTargetId);
-        targetNode.children.push(node);
-        targetNode.collapsed = false;
-      }else{
-        const targetArr = findParentArray(list.items, dropTargetId) || list.items;
-        const targetIdx = targetArr.findIndex(n => n.id === dropTargetId);
-        const insertAt = dropMode === 'before' ? targetIdx : targetIdx + 1;
-        targetArr.splice(insertAt, 0, node);
-      }
-      save();
-    }
-    renderDetail();
-  }
-
-  // 押した瞬間、掴んだのがわかるようにハンドルを少し目立たせる(まだ移動モードではない)
-  wrap.classList.add('grab-pending');
-  const clearPendingVisual = () => wrap.classList.remove('grab-pending');
-  document.addEventListener('pointerup', clearPendingVisual, { once:true });
-  document.addEventListener('pointercancel', clearPendingVisual, { once:true });
-}
 
 // ===== 書き出し / 読み込み =====
 document.getElementById('btn-export').addEventListener('click', ()=>{

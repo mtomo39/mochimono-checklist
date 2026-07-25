@@ -131,57 +131,14 @@ html,body{
 .node-row{
   display:flex; align-items:center; gap:10px;
   padding:10px 14px;
-  border-bottom:0.5px solid var(--separator);
 }
-.node.last-in-group > .node-row{ border-bottom:none; }
+.node.last-in-group > .node-toolsrow,
+.node.last-in-group > .node-subrow{ border-bottom:none; }
 
 .node.depth-0 > .node-row{ padding-left:14px; }
 .node.depth-1 > .node-row{ padding-left:34px; }
 .node.depth-2 > .node-row{ padding-left:54px; }
 .node.depth-3 > .node-row{ padding-left:74px; }
-
-.drag-handle{
-  background:none; border:none; font-size:1.05rem; color:#C7C7CC;
-  cursor:grab; touch-action:none; padding:8px 10px; margin:-8px -4px -8px -10px;
-  flex-shrink:0; line-height:1; border-radius:8px;
-  transition:background .12s ease, color .12s ease, transform .12s ease;
-}
-.drag-handle:active{ cursor:grabbing; }
-.drag-handle.disabled{ opacity:.25; cursor:default; }
-
-/* 掴んだ瞬間(まだ移動確定前)のフィードバック */
-.node.grab-pending .drag-handle{
-  background:#E5E5EA; color:var(--accent); transform:scale(1.15);
-}
-
-/* 移動モード中の項目本体 */
-.node.dragging > .node-row{
-  background:#EAF3FF;
-  box-shadow:0 8px 20px rgba(0,0,0,0.16);
-  border-radius:8px;
-  transform:scale(1.02);
-  position:relative; z-index:5;
-}
-.node.dragging .drag-handle{ color:var(--accent); }
-
-/* ドロップ先のハイライト */
-.node-row.drop-before{ box-shadow:inset 0 3px 0 0 var(--accent); }
-.node-row.drop-after{ box-shadow:inset 0 -3px 0 0 var(--accent); }
-.node-row.drop-nest{
-  background:rgba(0,122,255,0.14);
-  box-shadow:inset 0 0 0 2px var(--accent);
-  border-radius:8px;
-}
-
-/* 指に追従するゴースト表示 */
-.drag-ghost{
-  position:fixed; top:0; left:0; z-index:9999; pointer-events:none;
-  transform:translate(-50%,-140%);
-  background:var(--text); color:#fff;
-  border-radius:8px; padding:8px 14px; font-size:.88rem; font-weight:600;
-  box-shadow:0 8px 20px rgba(0,0,0,0.28);
-  max-width:70vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
 
 .node-toggle-collapse{
   background:none; border:none; font-size:.7rem; color:#C7C7CC;
@@ -214,21 +171,42 @@ html,body{
   background:#F2F2F7; border-radius:6px; padding:2px 7px; white-space:nowrap; flex-shrink:0;
 }
 
-.node-actions{ display:flex; gap:0; flex-shrink:0; }
-.node-actions button{
+.act-del{
   background:none; border:none; font-size:.9rem; color:var(--text-secondary);
-  cursor:pointer; padding:4px 5px; opacity:.6;
+  cursor:pointer; padding:4px 5px; opacity:.6; flex-shrink:0;
 }
-.node-actions button:hover{ opacity:1; }
-.node-actions .danger:hover{ color:#FF3B30; }
+.act-del:hover{ opacity:1; color:#FF3B30; }
 
 .node-children{ }
 
-.node-subrow{
-  display:flex; gap:14px; padding:0 14px 8px 54px; flex-wrap:wrap;
+/* ---- 移動・階層・追加のツール行 ---- */
+.node-toolsrow{
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  padding:0 14px 8px 40px;
   border-bottom:0.5px solid var(--separator);
 }
-.node.depth-0 .node-subrow{ padding-left:44px; }
+.node.depth-0 > .node-toolsrow{ padding-left:14px; }
+.node.depth-1 > .node-toolsrow{ padding-left:34px; }
+.node.depth-2 > .node-toolsrow{ padding-left:54px; }
+.node.depth-3 > .node-toolsrow{ padding-left:74px; }
+
+.tool-btn{
+  background:#F2F2F7; border:none; border-radius:7px;
+  color:var(--accent); font-family:inherit; font-size:.85rem; font-weight:600;
+  padding:5px 9px; cursor:pointer; line-height:1;
+}
+.tool-btn:disabled{ color:#C7C7CC; opacity:.5; cursor:default; }
+.tool-btn-text{ font-size:.75rem; font-weight:500; }
+.tool-sep{ flex:1 1 0; min-width:2px; }
+
+.node-subrow{
+  display:flex; gap:14px; padding:0 14px 8px 40px; flex-wrap:wrap;
+  border-bottom:0.5px solid var(--separator);
+}
+.node.depth-0 .node-subrow{ padding-left:14px; }
+.node.depth-1 .node-subrow{ padding-left:34px; }
+.node.depth-2 .node-subrow{ padding-left:54px; }
+.node.depth-3 .node-subrow{ padding-left:74px; }
 .mini-btn{
   font-size:.75rem; padding:0; border:none; background:none; color:var(--accent); cursor:pointer; font-family:inherit;
 }
