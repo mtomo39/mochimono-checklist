@@ -28,6 +28,7 @@ html,body{
   outline:none;
 }
 .detail-title-bar h1{ cursor:text; border-radius:6px; padding:2px 4px; margin:0 -4px; }
+.detail-title-bar h1:empty::before{ content:attr(data-placeholder); color:#C7C7CC; }
 .detail-title-bar h1:focus{ background:var(--card); box-shadow:0 0 0 2px var(--accent); }
 
 /* ---- ナビゲーションバー(戻る) ---- */
@@ -117,6 +118,13 @@ html,body{
 }
 .seg-btn.active{ background:var(--card); box-shadow:0 1px 2px rgba(0,0,0,0.12); }
 
+/* リスト全体のチェック一括操作 */
+.list-clear-row{
+  display:flex; justify-content:center; gap:20px;
+  margin:0 4px 16px; padding-bottom:2px;
+}
+.list-clear-row .mini-btn{ font-size:.82rem; padding:4px 2px; }
+
 /* ---- ツリー(アイテム行) ---- */
 .tree-root{ margin-bottom:8px; }
 
@@ -133,11 +141,47 @@ html,body{
 .node.depth-3 > .node-row{ padding-left:74px; }
 
 .drag-handle{
-  background:none; border:none; font-size:.95rem; color:#C7C7CC;
-  cursor:grab; touch-action:none; padding:2px 2px; flex-shrink:0; line-height:1;
+  background:none; border:none; font-size:1.05rem; color:#C7C7CC;
+  cursor:grab; touch-action:none; padding:8px 10px; margin:-8px -4px -8px -10px;
+  flex-shrink:0; line-height:1; border-radius:8px;
+  transition:background .12s ease, color .12s ease, transform .12s ease;
 }
 .drag-handle:active{ cursor:grabbing; }
 .drag-handle.disabled{ opacity:.25; cursor:default; }
+
+/* 掴んだ瞬間(まだ移動確定前)のフィードバック */
+.node.grab-pending .drag-handle{
+  background:#E5E5EA; color:var(--accent); transform:scale(1.15);
+}
+
+/* 移動モード中の項目本体 */
+.node.dragging > .node-row{
+  background:#EAF3FF;
+  box-shadow:0 8px 20px rgba(0,0,0,0.16);
+  border-radius:8px;
+  transform:scale(1.02);
+  position:relative; z-index:5;
+}
+.node.dragging .drag-handle{ color:var(--accent); }
+
+/* ドロップ先のハイライト */
+.node-row.drop-before{ box-shadow:inset 0 3px 0 0 var(--accent); }
+.node-row.drop-after{ box-shadow:inset 0 -3px 0 0 var(--accent); }
+.node-row.drop-nest{
+  background:rgba(0,122,255,0.14);
+  box-shadow:inset 0 0 0 2px var(--accent);
+  border-radius:8px;
+}
+
+/* 指に追従するゴースト表示 */
+.drag-ghost{
+  position:fixed; top:0; left:0; z-index:9999; pointer-events:none;
+  transform:translate(-50%,-140%);
+  background:var(--text); color:#fff;
+  border-radius:8px; padding:8px 14px; font-size:.88rem; font-weight:600;
+  box-shadow:0 8px 20px rgba(0,0,0,0.28);
+  max-width:70vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 
 .node-toggle-collapse{
   background:none; border:none; font-size:.7rem; color:#C7C7CC;
@@ -161,6 +205,7 @@ html,body{
   flex:1; font-size:.98rem; word-break:break-word;
   outline:none; border-radius:5px; padding:1px 3px; margin:-1px -3px;
 }
+.node-name:empty::before{ content:attr(data-placeholder); color:#C7C7CC; }
 .node-name:focus{ box-shadow:0 0 0 2px var(--accent); background:#fff; }
 .node-row.checked .node-name{ color:var(--text-secondary); text-decoration:line-through; }
 
@@ -187,6 +232,3 @@ html,body{
 .mini-btn{
   font-size:.75rem; padding:0; border:none; background:none; color:var(--accent); cursor:pointer; font-family:inherit;
 }
-
-.node.dragging{ opacity:.5; }
-.node.dragging .node-row{ background:#F2F2F7; }

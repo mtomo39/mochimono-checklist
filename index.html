@@ -48,7 +48,7 @@
     </div>
 
     <header class="large-title-bar detail-title-bar">
-      <h1 id="detail-title" contenteditable="true" spellcheck="false"></h1>
+      <h1 id="detail-title" contenteditable="true" spellcheck="false" data-placeholder="新しいリスト"></h1>
     </header>
 
     <div class="progress-wrap">
@@ -59,6 +59,11 @@
     <div class="segmented" role="group" aria-label="表示切替">
       <button class="seg-btn active" data-filter="all">すべて</button>
       <button class="seg-btn" data-filter="unchecked">未チェック</button>
+    </div>
+
+    <div class="list-clear-row">
+      <button id="btn-check-all-list" class="mini-btn">すべてチェック</button>
+      <button id="btn-uncheck-all-list" class="mini-btn">すべて解除</button>
     </div>
 
     <div id="tree-root" class="card-group tree-root"></div>

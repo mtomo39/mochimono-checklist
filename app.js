@@ -18,7 +18,7 @@ function save(){
   catch(e){ console.error('save failed', e); }
 }
 
-function newNode(name, note=''){
+function newNode(name='', note=''){
   return { id:uid(), name, note, checked:false, collapsed:false, children:[] };
 }
 
@@ -150,12 +150,26 @@ function renderLists(){
   });
 }
 
+// 編集中(キーボード表示中)に「追加」系ボタンをタップした場合、
+// 1回目のタップはキーボードを閉じるだけにして、誤操作での追加を防ぐ
+function guardAddClick(e){
+  const active = document.activeElement;
+  const isEditing = active && (active.classList && active.classList.contains('node-name') || active === detailTitle);
+  if(isEditing){
+    active.blur();
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+document.getElementById('btn-new-list').addEventListener('click', guardAddClick, true);
+document.getElementById('btn-add-root-item').addEventListener('click', guardAddClick, true);
+
 document.getElementById('btn-new-list').addEventListener('click', ()=>{
   const color = LIST_COLORS[state.lists.length % LIST_COLORS.length];
-  const list = { id:uid(), name:'新しいリスト', color, filter:'all', items:[] };
+  const list = { id:uid(), name:'', color, filter:'all', items:[] };
   state.lists.push(list);
   save();
-  showDetail(list.id, true); // 作成直後にタイトルを選択状態にして即リネームできるようにする
+  showDetail(list.id, true); // 作成直後にタイトルへフォーカスして即入力できるようにする
 });
 
 document.getElementById('btn-back').addEventListener('click', showLists);
@@ -165,7 +179,7 @@ detailTitle.addEventListener('blur', ()=>{
   const list = findList(state.currentListId);
   if(!list) return;
   const val = detailTitle.textContent.trim();
-  list.name = val || list.name; // 空にしたら元に戻す
+  list.name = val || '無題のリスト';
   detailTitle.textContent = list.name;
   save();
   renderLists(); // 一覧側の名前も更新しておく
@@ -221,7 +235,7 @@ function renderNode(node, list, depth){
     <button class="drag-handle" title="ドラッグで並び替え">⠿</button>
     ${hasChildren ? `<button class="node-toggle-collapse">${node.collapsed?'▶':'▼'}</button>` : '<span style="width:16px;flex-shrink:0"></span>'}
     <button class="check-circle${node.checked?' checked':''}" aria-label="チェック"></button>
-    <span class="node-name" contenteditable="true" spellcheck="false"></span>
+    <span class="node-name" contenteditable="true" spellcheck="false" data-placeholder="新規項目"></span>
     ${hasChildren ? `<span class="node-count"></span>` : ''}
     <div class="node-actions">
       <button class="act-add" title="子項目を追加">＋</button>
@@ -249,7 +263,7 @@ function renderNode(node, list, depth){
   const nameEl = row.querySelector('.node-name');
   nameEl.addEventListener('blur', ()=>{
     const val = nameEl.textContent.trim();
-    node.name = val || node.name;
+    node.name = val || '無題の項目';
     nameEl.textContent = node.name;
     save();
   });
@@ -258,8 +272,10 @@ function renderNode(node, list, depth){
   });
 
   // 子項目の追加(追加後すぐ名前を編集できるようにフォーカス)
-  row.querySelector('.act-add').addEventListener('click', ()=>{
-    const child = newNode('新規項目');
+  const addBtn = row.querySelector('.act-add');
+  addBtn.addEventListener('click', guardAddClick, true);
+  addBtn.addEventListener('click', ()=>{
+    const child = newNode();
     node.children.push(child);
     node.collapsed = false;
     save(); renderDetail();
@@ -280,7 +296,7 @@ function renderNode(node, list, depth){
     handle.disabled = true;
     handle.classList.add('disabled');
   }else{
-    handle.addEventListener('pointerdown', (e)=> startDrag(e, wrap, list));
+    handle.addEventListener('pointerdown', (e)=> startDrag(e, wrap, node, list));
   }
 
   wrap.appendChild(row);
@@ -332,7 +348,7 @@ function focusNodeName(nodeId){
 
 document.getElementById('btn-add-root-item').addEventListener('click', ()=>{
   const list = findList(state.currentListId);
-  const child = newNode('新規項目');
+  const child = newNode();
   list.items.push(child);
   save(); renderDetail();
   focusNodeName(child.id);
@@ -346,51 +362,149 @@ document.querySelectorAll('.seg-btn').forEach(btn=>{
   });
 });
 
-// ===== ドラッグ&ドロップで並び替え =====
+document.getElementById('btn-check-all-list').addEventListener('click', ()=>{
+  const list = findList(state.currentListId);
+  list.items.forEach(n => setCheckedRecursive(n, true));
+  save(); renderDetail();
+});
+document.getElementById('btn-uncheck-all-list').addEventListener('click', ()=>{
+  const list = findList(state.currentListId);
+  list.items.forEach(n => setCheckedRecursive(n, false));
+  save(); renderDetail();
+});
+
+// ===== ドラッグ&ドロップで並び替え・階層移動 =====
+const LONG_PRESS_MS = 180;
+const MOVE_CANCEL_PX = 10;
 let dragCtx = null;
 
-function startDrag(e, wrap, list){
-  e.preventDefault();
-  const container = wrap.parentElement; // treeRoot もしくは .node-children
-  wrap.setPointerCapture(e.pointerId);
-  wrap.classList.add('dragging');
-  dragCtx = { pointerId: e.pointerId };
+function isDescendant(node, id){
+  return node.children.some(c => c.id === id || isDescendant(c, id));
+}
+
+function clearDropHighlights(){
+  document.querySelectorAll('.node-row.drop-before, .node-row.drop-after, .node-row.drop-nest')
+    .forEach(el => el.classList.remove('drop-before','drop-after','drop-nest'));
+}
+
+function startDrag(e, wrap, node, list){
+  const startX = e.clientX, startY = e.clientY;
+  const pointerId = e.pointerId;
+  let longPressTimer = null;
+  let activated = false;
+
+  function cleanupPending(){
+    clearTimeout(longPressTimer);
+    document.removeEventListener('pointermove', onPreMove);
+    document.removeEventListener('pointerup', onPreUp);
+  }
+
+  function onPreMove(ev){
+    if(ev.pointerId !== pointerId) return;
+    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    if(Math.hypot(dx,dy) > MOVE_CANCEL_PX) cleanupPending();
+  }
+  function onPreUp(ev){
+    if(ev.pointerId !== pointerId) return;
+    cleanupPending();
+  }
+
+  document.addEventListener('pointermove', onPreMove);
+  document.addEventListener('pointerup', onPreUp);
+
+  longPressTimer = setTimeout(()=>{
+    cleanupPending();
+    activated = true;
+    activateDrag();
+  }, LONG_PRESS_MS);
+
+  let ghost = null;
+
+  function activateDrag(){
+    wrap.classList.add('dragging');
+    try{ wrap.setPointerCapture(pointerId); }catch(_){/* noop */}
+    dragCtx = { pointerId, dropTargetId:null, dropMode:null };
+
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.textContent = node.name || '(無題の項目)';
+    document.body.appendChild(ghost);
+    positionGhost(startX, startY);
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }
+
+  function positionGhost(x, y){
+    if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
+  }
 
   function onMove(ev){
     if(!dragCtx || ev.pointerId !== dragCtx.pointerId) return;
-    const siblings = Array.from(container.children).filter(el => el.classList.contains('node') && el !== wrap);
-    const y = ev.clientY;
-    let target = null;
-    for(const sib of siblings){
-      const rect = sib.getBoundingClientRect();
-      if(y < rect.top + rect.height/2){ target = sib; break; }
-    }
-    if(target) container.insertBefore(wrap, target);
-    else container.appendChild(wrap);
+    ev.preventDefault();
+    positionGhost(ev.clientX, ev.clientY);
+    clearDropHighlights();
+    dragCtx.dropTargetId = null;
+    dragCtx.dropMode = null;
+
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    const targetRow = el && el.closest && el.closest('.node-row');
+    if(!targetRow) return;
+    const targetWrap = targetRow.closest('.node');
+    if(!targetWrap) return;
+    const targetId = targetWrap.dataset.id;
+    if(targetId === node.id) return;
+    if(isDescendant(node, targetId)) return; // 自分の子孫の上には置けない(循環防止)
+
+    const rect = targetRow.getBoundingClientRect();
+    const relY = (ev.clientY - rect.top) / rect.height;
+    let mode;
+    if(relY < 0.28) mode = 'before';
+    else if(relY > 0.72) mode = 'after';
+    else mode = 'nest';
+
+    dragCtx.dropTargetId = targetId;
+    dragCtx.dropMode = mode;
+    targetRow.classList.add(mode === 'nest' ? 'drop-nest' : (mode === 'before' ? 'drop-before' : 'drop-after'));
   }
 
   function onUp(ev){
     if(!dragCtx || ev.pointerId !== dragCtx.pointerId) return;
+    const { dropTargetId, dropMode } = dragCtx;
+    dragCtx = null;
     wrap.classList.remove('dragging');
+    clearDropHighlights();
+    if(ghost){ ghost.remove(); ghost = null; }
     try{ wrap.releasePointerCapture(ev.pointerId); }catch(_){/* noop */}
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
-    dragCtx = null;
 
-    const arr = (container === treeRoot)
-      ? list.items
-      : findNode(list.items, container.dataset.parentId).children;
-    const idsInOrder = Array.from(container.children)
-      .filter(el => el.classList.contains('node'))
-      .map(el => el.dataset.id);
-    arr.sort((a,b) => idsInOrder.indexOf(a.id) - idsInOrder.indexOf(b.id));
+    if(dropTargetId && dropMode){
+      // 元の場所から取り除く
+      const oldArr = findParentArray(list.items, node.id) || list.items;
+      const oldIdx = oldArr.findIndex(n => n.id === node.id);
+      if(oldIdx > -1) oldArr.splice(oldIdx, 1);
 
-    save();
+      if(dropMode === 'nest'){
+        const targetNode = findNode(list.items, dropTargetId);
+        targetNode.children.push(node);
+        targetNode.collapsed = false;
+      }else{
+        const targetArr = findParentArray(list.items, dropTargetId) || list.items;
+        const targetIdx = targetArr.findIndex(n => n.id === dropTargetId);
+        const insertAt = dropMode === 'before' ? targetIdx : targetIdx + 1;
+        targetArr.splice(insertAt, 0, node);
+      }
+      save();
+    }
     renderDetail();
   }
 
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
+  // 押した瞬間、掴んだのがわかるようにハンドルを少し目立たせる(まだ移動モードではない)
+  wrap.classList.add('grab-pending');
+  const clearPendingVisual = () => wrap.classList.remove('grab-pending');
+  document.addEventListener('pointerup', clearPendingVisual, { once:true });
+  document.addEventListener('pointercancel', clearPendingVisual, { once:true });
 }
 
 // ===== 書き出し / 読み込み =====
