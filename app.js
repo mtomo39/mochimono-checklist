@@ -51,6 +51,19 @@ function setCheckedRecursive(node, value){
   node.children.forEach(c => setCheckedRecursive(c, value));
 }
 
+// あるノードから上へ辿りながら、「直下の子が全部チェック済みか」に基づいて
+// 親のチェック状態を自動的に揃えていく(子が全部揃えば親もON、揃わなければ親はOFF)
+function syncCheckedUpward(list, nodeId){
+  let current = findNode(list.items, nodeId);
+  while(current){
+    if(current.children.length > 0){
+      current.checked = current.children.every(c => c.checked);
+    }
+    const loc = locate(list, current.id);
+    current = loc.parent;
+  }
+}
+
 function countDirect(node){
   const total = node.children.length;
   const checked = node.children.filter(c=>c.checked).length;
@@ -253,9 +266,10 @@ function renderNode(node, list, depth){
     });
   }
 
-  // チェックの切り替え(子階層・孫階層も含めて連動する)
+  // チェックの切り替え(子階層へは強制的に、親階層へは「全部揃ったか」で連動する)
   row.querySelector('.check-circle').addEventListener('click', ()=>{
     setCheckedRecursive(node, !node.checked);
+    syncCheckedUpward(list, node.id);
     save(); renderDetail();
   });
 
@@ -274,7 +288,9 @@ function renderNode(node, list, depth){
   row.querySelector('.act-del').addEventListener('click', ()=>{
     if(hasChildren && !confirm(`「${node.name}」を削除する?(子項目も全部消えるよ)`)) return;
     const l2 = locate(list, node.id);
+    const parentId = l2.parent ? l2.parent.id : null;
     l2.arr.splice(l2.idx, 1);
+    if(parentId) syncCheckedUpward(list, parentId);
     save(); renderDetail();
   });
 
@@ -310,9 +326,11 @@ function renderNode(node, list, depth){
   toolsrow.querySelector('.act-outdent').addEventListener('click', ()=>{
     const l = locate(list, node.id);
     if(!l.parent) return; // すでにルート直下
+    const oldParentId = l.parent.id;
     const grand = locate(list, l.parent.id);
     const [moved] = l.arr.splice(l.idx, 1);
     grand.arr.splice(grand.idx+1, 0, moved);
+    syncCheckedUpward(list, oldParentId);
     save(); renderDetail();
   });
   toolsrow.querySelector('.act-indent').addEventListener('click', ()=>{
@@ -322,6 +340,7 @@ function renderNode(node, list, depth){
     const [moved] = l.arr.splice(l.idx, 1);
     prevSibling.children.push(moved);
     prevSibling.collapsed = false;
+    syncCheckedUpward(list, prevSibling.id);
     save(); renderDetail();
   });
 
@@ -331,6 +350,7 @@ function renderNode(node, list, depth){
     const l = locate(list, node.id);
     const child = newNode();
     l.arr.splice(l.idx+1, 0, child);
+    if(l.parent) syncCheckedUpward(list, l.parent.id);
     save(); renderDetail();
     focusNodeName(child.id);
   });
@@ -341,6 +361,7 @@ function renderNode(node, list, depth){
     const child = newNode();
     node.children.push(child);
     node.collapsed = false;
+    syncCheckedUpward(list, node.id);
     save(); renderDetail();
     focusNodeName(child.id);
   });
