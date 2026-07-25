@@ -253,9 +253,9 @@ function renderNode(node, list, depth){
     });
   }
 
-  // チェックの切り替え
+  // チェックの切り替え(子階層・孫階層も含めて連動する)
   row.querySelector('.check-circle').addEventListener('click', ()=>{
-    node.checked = !node.checked;
+    setCheckedRecursive(node, !node.checked);
     save(); renderDetail();
   });
 
@@ -346,25 +346,6 @@ function renderNode(node, list, depth){
   });
 
   wrap.appendChild(toolsrow);
-
-  // 全チェック/全解除(このノード配下すべて、子がある時だけ表示)
-  if(hasChildren){
-    const subrow = document.createElement('div');
-    subrow.className = 'node-subrow';
-    subrow.innerHTML = `
-      <button class="mini-btn act-check-all">この階層を全部チェック</button>
-      <button class="mini-btn act-uncheck-all">この階層を全部解除</button>
-    `;
-    subrow.querySelector('.act-check-all').addEventListener('click', ()=>{
-      setCheckedRecursive(node, true);
-      save(); renderDetail();
-    });
-    subrow.querySelector('.act-uncheck-all').addEventListener('click', ()=>{
-      setCheckedRecursive(node, false);
-      save(); renderDetail();
-    });
-    wrap.appendChild(subrow);
-  }
 
   if(hasChildren && !node.collapsed){
     const childWrap = document.createElement('div');
