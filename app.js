@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v8';
+const APP_VERSION = 'v9';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -73,12 +73,16 @@ function countDirect(node){
   return { total, checked };
 }
 
+// 末端(子を持たない項目)だけを数える。親(カテゴリ)は数に含めない方が実態に合う
 function countAll(nodes){
   let total=0, checked=0;
   nodes.forEach(n=>{
-    total++; if(n.checked) checked++;
-    const sub = countAll(n.children);
-    total += sub.total; checked += sub.checked;
+    if(n.children.length === 0){
+      total++; if(n.checked) checked++;
+    }else{
+      const sub = countAll(n.children);
+      total += sub.total; checked += sub.checked;
+    }
   });
   return { total, checked };
 }
