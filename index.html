@@ -33,6 +33,12 @@
       <span class="add-row-icon">＋</span>新しいリスト
     </button>
 
+    <button id="btn-new-from-template" class="add-row">
+      <span class="add-row-icon">📄</span>テンプレートから作る
+    </button>
+
+    <div id="template-picker" class="card-group hidden"></div>
+
     <div class="io-row">
       <button id="btn-export" class="btn-ghost">書き出し (JSON)</button>
       <label class="btn-ghost file-label">
@@ -48,6 +54,7 @@
   <section id="view-detail" class="view hidden">
     <div class="nav-bar">
       <button id="btn-back" class="nav-back">‹ リスト</button>
+      <button id="btn-save-template" class="nav-action">📄 保存</button>
     </div>
 
     <header class="large-title-bar detail-title-bar">

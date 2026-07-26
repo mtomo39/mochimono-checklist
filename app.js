@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -9,7 +9,8 @@ let selectedNodeId = null; // 今タップして選択中の項目(この項目�
 
 /** state = { lists: [ {id,name,color,filter,items:[node,...]} ] , currentListId } */
 const _loaded = load();
-let state = _loaded || { lists: [], currentListId: null };
+let state = _loaded || { lists: [], currentListId: null, templates: [] };
+if(!state.templates) state.templates = []; // 既存データにtemplatesが無い場合の後方互換
 if(!_loaded){
   // 初回起動時だけ、使い方がわかるサンプルリストを1つ用意しておく
   state.lists.push(buildTutorialList());
@@ -56,6 +57,18 @@ function save(){
 
 function newNode(name='', note=''){
   return { id:uid(), name, note, checked:false, collapsed:false, children:[] };
+}
+
+// テンプレートから複製する時用: 新しいidを振り、チェック状態はまっさらにする
+function cloneNodeFresh(node){
+  return {
+    id: uid(),
+    name: node.name,
+    note: node.note || '',
+    checked: false,
+    collapsed: false,
+    children: node.children.map(cloneNodeFresh)
+  };
 }
 
 function findList(id){ return state.lists.find(l => l.id===id); }
@@ -140,6 +153,7 @@ function showLists(){
   selectedNodeId = null;
   viewDetail.classList.add('hidden');
   viewLists.classList.remove('hidden');
+  document.getElementById('template-picker').classList.add('hidden');
   renderLists();
   save();
 }
@@ -249,6 +263,70 @@ document.getElementById('btn-show-tutorial').addEventListener('click', ()=>{
   state.lists.push(buildTutorialList());
   save(); renderLists();
 });
+
+// ===== テンプレート機能 =====
+const templatePicker = document.getElementById('template-picker');
+
+document.getElementById('btn-save-template').addEventListener('click', ()=>{
+  const list = findList(state.currentListId);
+  if(!list) return;
+  const name = prompt('テンプレート名は?', list.name);
+  if(!name) return;
+  const tmpl = { id:uid(), name, items: list.items.map(cloneNodeFresh) };
+  state.templates.push(tmpl);
+  save();
+  alert(`「${name}」をテンプレートとして保存したよ。リスト一覧の「📄 テンプレートから作る」から使えるぞ。`);
+});
+
+document.getElementById('btn-new-from-template').addEventListener('click', ()=>{
+  renderTemplatePicker();
+  templatePicker.classList.remove('hidden');
+});
+
+function renderTemplatePicker(){
+  templatePicker.innerHTML = '';
+  if(state.templates.length===0){
+    templatePicker.innerHTML = '<div class="empty-hint">まだテンプレートがないよ。リストの詳細画面右上「📄 保存」で登録できるよ。</div>';
+  }else{
+    state.templates.forEach(tmpl=>{
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.innerHTML = `
+        <span class="list-icon" style="background:#8E8E93">📄</span>
+        <span class="lr-name"></span>
+        <button class="lr-del" title="テンプレートを削除">🗑</button>
+        <span class="lr-chevron">›</span>
+      `;
+      row.querySelector('.lr-name').textContent = tmpl.name;
+      row.addEventListener('click', (e)=>{
+        if(e.target.closest('.lr-del')) return;
+        createListFromTemplate(tmpl);
+      });
+      row.querySelector('.lr-del').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(confirm(`テンプレート「${tmpl.name}」を削除する?`)){
+          state.templates = state.templates.filter(t=>t.id!==tmpl.id);
+          save(); renderTemplatePicker();
+        }
+      });
+      templatePicker.appendChild(row);
+    });
+  }
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-ghost btn-ghost-full';
+  cancelBtn.textContent = 'キャンセル';
+  cancelBtn.addEventListener('click', ()=> templatePicker.classList.add('hidden'));
+  templatePicker.appendChild(cancelBtn);
+}
+
+function createListFromTemplate(tmpl){
+  const color = LIST_COLORS[state.lists.length % LIST_COLORS.length];
+  const list = { id:uid(), name:tmpl.name, color, filter:'all', items: tmpl.items.map(cloneNodeFresh) };
+  state.lists.push(list);
+  templatePicker.classList.add('hidden');
+  save();
+  showDetail(list.id);
+}
 
 // タイトル(リスト名)のインライン編集
 detailTitle.addEventListener('blur', ()=>{
@@ -526,8 +604,10 @@ document.getElementById('file-import').addEventListener('change', (e)=>{
       if(!imported.lists) throw new Error('形式が違うよ');
       if(confirm('今のデータに追加する?(キャンセルで全部上書き)')){
         state.lists.push(...imported.lists);
+        if(imported.templates) state.templates.push(...imported.templates);
       }else{
         state.lists = imported.lists;
+        state.templates = imported.templates || [];
       }
       save(); showLists();
     }catch(err){
