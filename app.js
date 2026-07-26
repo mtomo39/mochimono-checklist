@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v10';
+const APP_VERSION = 'v11';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -244,6 +244,11 @@ document.getElementById('btn-new-list').addEventListener('click', ()=>{
 });
 
 document.getElementById('btn-back').addEventListener('click', showLists);
+
+document.getElementById('btn-show-tutorial').addEventListener('click', ()=>{
+  state.lists.push(buildTutorialList());
+  save(); renderLists();
+});
 
 // タイトル(リスト名)のインライン編集
 detailTitle.addEventListener('blur', ()=>{

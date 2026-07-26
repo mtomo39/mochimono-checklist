@@ -108,6 +108,7 @@ html,body{
   padding:10px; font-size:.8rem; cursor:pointer; font-family:inherit;
 }
 .io-row{ display:flex; gap:10px; margin-top:8px; }
+.btn-ghost-full{ width:100%; margin-top:10px; }
 .file-label{ display:flex; align-items:center; justify-content:center; }
 
 /* ---- 進捗バー ---- */
