@@ -76,6 +76,12 @@ html,body{
 }
 .list-row .lr-count{ color:var(--text-secondary); font-size:1rem; }
 .list-row .lr-chevron{ color:#C7C7CC; font-size:1rem; margin-left:2px; }
+.list-row .lr-move{
+  background:none; border:none; color:var(--accent); font-size:.9rem;
+  cursor:pointer; padding:4px 4px; opacity:.85;
+}
+.list-row .lr-move:disabled{ color:#C7C7CC; opacity:.4; cursor:default; }
+
 .list-row .lr-del{
   background:none; border:none; color:var(--text-secondary); font-size:1rem;
   cursor:pointer; opacity:.55; padding:2px 2px 2px 6px;

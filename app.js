@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v9';
+const APP_VERSION = 'v10';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -8,7 +8,40 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 let selectedNodeId = null; // 今タップして選択中の項目(この項目だけ操作ボタンを表示する)
 
 /** state = { lists: [ {id,name,color,filter,items:[node,...]} ] , currentListId } */
-let state = load() || { lists: [], currentListId: null };
+const _loaded = load();
+let state = _loaded || { lists: [], currentListId: null };
+if(!_loaded){
+  // 初回起動時だけ、使い方がわかるサンプルリストを1つ用意しておく
+  state.lists.push(buildTutorialList());
+  save();
+}
+
+function buildTutorialList(){
+  const list = { id:uid(), name:'使い方ガイド(サンプル)', color:LIST_COLORS[0], filter:'all', items:[] };
+
+  const hierarchyDemo = newNode('階層のサンプル(▼を押して開いてみて)');
+  const child1 = newNode('子項目1: 「⇥」ボタンで前の項目の子にできるよ');
+  const child2 = newNode('子項目2: 「⇤」ボタンで階層をひとつ戻せるよ');
+  const grandchild = newNode('孫項目: こうやってさらに深い階層も作れるよ');
+  child1.children.push(grandchild);
+  hierarchyDemo.children.push(child1, child2);
+
+  const featuresDemo = newNode('べんりな機能まとめ');
+  featuresDemo.children.push(
+    newNode('上のバーで「すべて/未チェック」を切り替えられるよ'),
+    newNode('「すべてチェック」「すべて解除」でリスト全体をリセットできるよ'),
+    newNode('「書き出し(JSON)」でバックアップ、「読み込み」で復元できるよ')
+  );
+
+  list.items.push(
+    newNode('◯をタップするとチェックできるよ(子階層も連動するよ)'),
+    newNode('文字をタップすると名前をその場で編集できるよ'),
+    hierarchyDemo,
+    featuresDemo,
+    newNode('このリストは削除してOK。自分の持ち物リストを作ろう!')
+  );
+  return list;
+}
 
 function load(){
   try{
@@ -152,13 +185,30 @@ function renderLists(){
       <span class="list-icon" style="background:${color}">✓</span>
       <span class="lr-name"></span>
       <span class="lr-count">${total>0 ? (total-checked) : ''}</span>
+      <button class="lr-move" title="上へ移動" ${idx===0 ? 'disabled':''}>↑</button>
+      <button class="lr-move" title="下へ移動" ${idx===state.lists.length-1 ? 'disabled':''}>↓</button>
       <button class="lr-del" title="削除">🗑</button>
       <span class="lr-chevron">›</span>
     `;
     row.querySelector('.lr-name').textContent = list.name;
     row.addEventListener('click', (e)=>{
-      if(e.target.closest('.lr-del')) return;
+      if(e.target.closest('.lr-del') || e.target.closest('.lr-move')) return;
       showDetail(list.id);
+    });
+    const [upBtn, downBtn] = row.querySelectorAll('.lr-move');
+    upBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(idx>0){
+        [state.lists[idx-1], state.lists[idx]] = [state.lists[idx], state.lists[idx-1]];
+        save(); renderLists();
+      }
+    });
+    downBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(idx<state.lists.length-1){
+        [state.lists[idx+1], state.lists[idx]] = [state.lists[idx], state.lists[idx+1]];
+        save(); renderLists();
+      }
     });
     row.querySelector('.lr-del').addEventListener('click', (e)=>{
       e.stopPropagation();
