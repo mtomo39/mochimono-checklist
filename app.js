@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v13';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -15,6 +15,55 @@ if(!_loaded){
   // 初回起動時だけ、使い方がわかるサンプルリストを1つ用意しておく
   state.lists.push(buildTutorialList());
   save();
+}
+
+// 「旅行の持ち物」テンプレートを最初から1つ入れておく(すでに入っていれば何もしない)
+const DEFAULT_TRAVEL_TEMPLATE_ID = 'tmpl-travel-default';
+if(!state.templates.some(t => t.id === DEFAULT_TRAVEL_TEMPLATE_ID)){
+  state.templates.push(buildDefaultTravelTemplate());
+  save();
+}
+
+// テンプレート内のノードを手早く組み立てるためのヘルパー
+function tn(name, children=[]){
+  return { id:uid(), name, note:'', checked:false, collapsed:false, children };
+}
+
+function buildDefaultTravelTemplate(){
+  return {
+    id: DEFAULT_TRAVEL_TEMPLATE_ID,
+    name: '旅行の持ち物',
+    items: [
+      tn('iPhone', [
+        tn('iPhone'),
+        tn('充電アダプタ'),
+        tn('ライトニングケーブル'),
+        tn('モバイルバッテリー'),
+        tn('TYPE-Cケーブル'),
+      ]),
+      tn('衛生品', [
+        tn('歯ブラシ'), tn('歯磨き粉'), tn('デンタルフロス'), tn('歯間ブラシ'),
+        tn('マスク'), tn('ハンカチ'), tn('ポケットティッシュ'), tn('クシ'),
+      ]),
+      tn('薬', [
+        tn('ロキソプロフェン'), tn('太田胃酸'), tn('葛根湯'),
+        tn('正露丸'), tn('虫刺され'), tn('酔い止め'),
+      ]),
+      tn('着替え', [
+        tn('下着✖️泊数'), tn('靴下✖️泊数✖️2'),
+      ]),
+      tn('財布'),
+      tn('メガネケース'),
+      tn('メガネ'),
+      tn('腕時計'),
+      tn('折り畳み傘'),
+      tn('数珠'),
+      tn('礼服（法事）', [
+        tn('礼服'), tn('ベルト'), tn('ワイシャツ'), tn('インナー白'),
+        tn('ネクタイ黒'), tn('ハンカチ白'), tn('靴下'), tn('革靴'), tn('フクサ'),
+      ]),
+    ]
+  };
 }
 
 function buildTutorialList(){
