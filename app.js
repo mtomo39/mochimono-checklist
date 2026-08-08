@@ -1,5 +1,5 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v16';
+const APP_VERSION = 'v17';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
 
@@ -497,17 +497,25 @@ function renderNode(node, list, depth, isCheckMode){
     save(); renderDetail();
   });
 
-  // 項目名のインライン編集
+  // 項目名のインライン編集(チェックモードでは編集の代わりにチェック切り替えにする)
   const nameEl = row.querySelector('.node-name');
-  nameEl.addEventListener('blur', ()=>{
-    const val = nameEl.textContent.trim();
-    node.name = val || '無題の項目';
-    nameEl.textContent = node.name;
-    save();
-  });
-  nameEl.addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
-  });
+  if(isCheckMode){
+    nameEl.addEventListener('click', ()=>{
+      setCheckedRecursive(node, !node.checked);
+      syncCheckedUpward(list, node.id);
+      save(); renderDetail();
+    });
+  }else{
+    nameEl.addEventListener('blur', ()=>{
+      const val = nameEl.textContent.trim();
+      node.name = val || '無題の項目';
+      nameEl.textContent = node.name;
+      save();
+    });
+    nameEl.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); nameEl.blur(); }
+    });
+  }
 
   row.querySelector('.act-del').addEventListener('click', ()=>{
     if(hasChildren && !confirm(`「${node.name}」を削除する?(子項目も全部消えるよ)`)) return;
