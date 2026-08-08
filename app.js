@@ -1,7 +1,13 @@
 // ===== 持ち物チェックリスト app.js =====
-const APP_VERSION = 'v13';
+const APP_VERSION = 'v16';
 const STORAGE_KEY = 'packing-checklists-v1';
 const LIST_COLORS = ['#FF9500','#007AFF','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FFCC00','#FF2D55'];
+
+// インポートしたJSONのcolorフィールドをそのままHTMLに埋め込むと属性エスケープの危険があるため、
+// 正しいカラーコード(#RRGGBB)かどうかを必ず検証してから使う
+function sanitizeHexColor(c){
+  return (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) ? c : null;
+}
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -67,7 +73,7 @@ function buildDefaultTravelTemplate(){
 }
 
 function buildTutorialList(){
-  const list = { id:uid(), name:'使い方ガイド(サンプル)', color:LIST_COLORS[0], filter:'all', items:[] };
+  const list = { id:uid(), name:'使い方ガイド(サンプル)', color:LIST_COLORS[0], filter:'all', mode:'edit', items:[] };
 
   const hierarchyDemo = newNode('階層のサンプル(▼を押して開いてみて)');
   const child1 = newNode('子項目1: 「⇥」ボタンで前の項目の子にできるよ');
@@ -241,7 +247,7 @@ function renderLists(){
 
   state.lists.forEach((list, idx)=>{
     const {total, checked} = countAll(list.items);
-    const color = list.color || LIST_COLORS[idx % LIST_COLORS.length];
+    const color = sanitizeHexColor(list.color) || LIST_COLORS[idx % LIST_COLORS.length];
     const row = document.createElement('div');
     row.className = 'list-row';
     row.innerHTML = `
@@ -300,7 +306,7 @@ document.getElementById('btn-add-root-item').addEventListener('click', guardAddC
 
 document.getElementById('btn-new-list').addEventListener('click', ()=>{
   const color = LIST_COLORS[state.lists.length % LIST_COLORS.length];
-  const list = { id:uid(), name:'', color, filter:'all', items:[] };
+  const list = { id:uid(), name:'', color, filter:'all', mode:'edit', items:[] };
   state.lists.push(list);
   save();
   showDetail(list.id, true); // 作成直後にタイトルへフォーカスして即入力できるようにする
@@ -311,6 +317,15 @@ document.getElementById('btn-back').addEventListener('click', showLists);
 document.getElementById('btn-show-tutorial').addEventListener('click', ()=>{
   state.lists.push(buildTutorialList());
   save(); renderLists();
+});
+
+// ===== 編集モード / チェックモードの切り替え =====
+document.getElementById('btn-toggle-mode').addEventListener('click', ()=>{
+  const list = findList(state.currentListId);
+  if(!list) return;
+  list.mode = (list.mode === 'check') ? 'edit' : 'check';
+  selectedNodeId = null; // モード切替時は選択状態をリセットしておく
+  save(); renderDetail();
 });
 
 // ===== テンプレート機能 =====
@@ -370,7 +385,7 @@ function renderTemplatePicker(){
 
 function createListFromTemplate(tmpl){
   const color = LIST_COLORS[state.lists.length % LIST_COLORS.length];
-  const list = { id:uid(), name:tmpl.name, color, filter:'all', items: tmpl.items.map(cloneNodeFresh) };
+  const list = { id:uid(), name:tmpl.name, color, filter:'all', mode:'edit', items: tmpl.items.map(cloneNodeFresh) };
   state.lists.push(list);
   templatePicker.classList.add('hidden');
   save();
@@ -397,6 +412,13 @@ function renderDetail(){
   if(!list){ showLists(); return; }
   detailTitle.textContent = list.name;
 
+  const isCheckMode = list.mode === 'check';
+  viewDetail.classList.toggle('check-mode', isCheckMode);
+  detailTitle.contentEditable = isCheckMode ? 'false' : 'true';
+  const toggleModeBtn = document.getElementById('btn-toggle-mode');
+  toggleModeBtn.textContent = isCheckMode ? '✏️ 編集する' : '🔒 チェックのみ';
+  toggleModeBtn.title = isCheckMode ? '編集モードに戻す' : 'チェックと開閉だけできるモードにする';
+
   document.querySelectorAll('.seg-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.filter === list.filter);
   });
@@ -412,7 +434,7 @@ function renderDetail(){
     treeRoot.innerHTML = `<div class="empty-hint">${list.items.length===0 ? 'まだ項目がないよ。下のボタンから追加しよう。' : '未チェックの項目はないよ。'}</div>`;
   }else{
     visibleRoots.forEach((node, i)=>{
-      const el = renderNode(node, list, 0);
+      const el = renderNode(node, list, 0, isCheckMode);
       if(i === visibleRoots.length-1) markLastInGroup(el);
       treeRoot.appendChild(el);
     });
@@ -424,7 +446,7 @@ function markLastInGroup(nodeEl){
   nodeEl.classList.add('last-in-group');
 }
 
-function renderNode(node, list, depth){
+function renderNode(node, list, depth, isCheckMode){
   const wrap = document.createElement('div');
   wrap.className = `node depth-${depth}`;
   wrap.dataset.id = node.id;
@@ -442,19 +464,21 @@ function renderNode(node, list, depth){
   row.innerHTML = `
     ${hasChildren ? `<button class="node-toggle-collapse">${node.collapsed?'▶':'▼'}</button>` : '<span style="width:34px;flex-shrink:0"></span>'}
     <button class="check-circle${node.checked?' checked':''}" aria-label="チェック"></button>
-    <span class="node-name" contenteditable="true" spellcheck="false" data-placeholder="新規項目"></span>
+    <span class="node-name" contenteditable="${isCheckMode ? 'false' : 'true'}" spellcheck="false" data-placeholder="新規項目"></span>
     ${hasChildren ? `<span class="node-count"></span>` : ''}
     <button class="act-del danger" title="削除">🗑</button>
   `;
   row.querySelector('.node-name').textContent = node.name;
 
-  // タップでこの項目を選択状態にする(選択中の項目だけ下に操作ボタンを出す)
-  row.addEventListener('click', ()=>{
-    if(selectedNodeId !== node.id){
-      selectedNodeId = node.id;
-      renderDetail();
-    }
-  });
+  // タップでこの項目を選択状態にする(選択中の項目だけ下に操作ボタンを出す/チェックモードでは無効)
+  if(!isCheckMode){
+    row.addEventListener('click', ()=>{
+      if(selectedNodeId !== node.id){
+        selectedNodeId = node.id;
+        renderDetail();
+      }
+    });
+  }
 
   if(hasChildren){
     const {total, checked} = countDirect(node);
@@ -496,8 +520,8 @@ function renderNode(node, list, depth){
 
   wrap.appendChild(row);
 
-  // ===== 移動・階層操作・追加ボタン(選択中の項目だけ表示) =====
-  if(node.id === selectedNodeId){
+  // ===== 移動・階層操作・追加ボタン(選択中の項目だけ表示/チェックモードでは非表示) =====
+  if(!isCheckMode && node.id === selectedNodeId){
     const toolsrow = document.createElement('div');
     toolsrow.className = 'node-toolsrow';
     toolsrow.innerHTML = `
@@ -584,7 +608,7 @@ function renderNode(node, list, depth){
     childWrap.dataset.parentId = node.id;
     const visibleChildren = node.children.filter(c => list.filter!=='unchecked' || nodeHasVisibleDescendant(c));
     visibleChildren.forEach((child, i)=>{
-      const el = renderNode(child, list, depth+1);
+      const el = renderNode(child, list, depth+1, isCheckMode);
       if(i === visibleChildren.length-1) markLastInGroup(el);
       childWrap.appendChild(el);
     });

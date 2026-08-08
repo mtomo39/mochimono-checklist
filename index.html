@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- このアプリ自身のファイル以外、一切の外部通信を許可しない設定
+     (万一コードに問題が混入しても、外部への勝手なデータ送信をブラウザ側でブロックする) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>持ち物チェックリスト</title>
 
 <!-- PWA / iOS ホーム画面対応 -->
@@ -54,7 +57,10 @@
   <section id="view-detail" class="view hidden">
     <div class="nav-bar">
       <button id="btn-back" class="nav-back">‹ リスト</button>
-      <button id="btn-save-template" class="nav-action">📄 保存</button>
+      <div class="nav-bar-right">
+        <button id="btn-toggle-mode" class="nav-action"></button>
+        <button id="btn-save-template" class="nav-action">📄 保存</button>
+      </div>
     </div>
 
     <header class="large-title-bar detail-title-bar">
